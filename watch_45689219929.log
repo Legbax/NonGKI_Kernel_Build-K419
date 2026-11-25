@@ -1,0 +1,66 @@
+[poll 1 16:52:01] {"c":"","s":"in_progress"}
+[poll 2 16:53:02] {"c":"failure","s":"completed"}
+=== FINAL conclusion=failure ===
+--- GB patch step result ---
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	﻿2026-11-25T19:52:55.7112960Z ##[group]Run cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7113367Z [36;1mcd $GITHUB_WORKSPACE/kernel_workspace/android-kernel[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7113790Z [36;1mecho "[GB] applying omni_clock_offset.patch (monotonic+boottime per-uid uptime spoof)"[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7114292Z [36;1mif patch -p1 --fuzz=3 --forward < $GITHUB_WORKSPACE/omni_clock_offset.patch; then[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7114663Z [36;1m  echo "[GB] direct patch applied OK"[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7114907Z [36;1melse[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7115192Z [36;1m  echo "[GB] direct patch did not apply cleanly -> layout-agnostic hand-port"[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7116074Z [36;1m  python3 $GITHUB_WORKSPACE/apply_merlin_clock_offset.py || { echo "[GB] hand-port FAILED"; exit 1; }[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7116561Z [36;1mfi[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7116793Z [36;1mecho 'CONFIG_KSU_SUSFS_CLOCK_OFFSET=y' >> out/.config[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7117174Z [36;1mecho "[GB] CLOCK_OFFSET in config:"; grep 'CLOCK_OFFSET' out/.config || echo "(none!)"[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7117823Z [36;1mecho "[GB] susfs clock-offset symbols present:"; grep -rl 'susfs_add_clock_offset\|CLOCK_OFFSET' fs/susfs.c include/linux/susfs.h 2>/dev/null | head[0m
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7135065Z shell: /usr/bin/bash -e {0}
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7135510Z env:
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7135708Z   DEVICE: merlin
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7135991Z   CCACHE_COMPILERCHECK: %compiler% -dumpmachine; %compiler% -dumpversion
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7136313Z   CCACHE_NOHASHDIR: true
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7136526Z   CCACHE_HARDLINK: true
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7136838Z   KERNEL_SOURCE: https://github.com/MrShockWAVEog/shockwave_kernel_xiaomi_mt6768
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7137170Z   KERNEL_SOURCE_BRANCH: 17.0
+--- error tail ---
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7143029Z   USE_GCC_32: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7143500Z   GCC_32_SOURCE: https://snapshots.linaro.org/gnu-toolchain/14.0-2023.06-1/arm-linux-gnueabihf/gcc-linaro-14.0.0-2023.06-x86_64_arm-linux-gnueabihf.tar.xz
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7143997Z   GCC_32_BRANCH: 
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7144179Z   USE_ANYKERNEL3: true
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7144448Z   ANYKERNEL3_SOURCE: https://github.com/MrShockWAVEog/AnyKernel3.git
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7144758Z   ANYKERNEL3_BRANCH: shockwave
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7145558Z   EXTRA_CMDS: LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- CROSS_COMPILE_COMPAT=arm-linux-gnueabi- CONFIG_NO_ERROR_ON_MISMATCH=y TARGET_BUILD_VARIANT=user
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7146182Z   DISABLE_LTO: 
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7146367Z   DISABLE_CC_WERROR: 
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7146572Z   ENABLE_PYTHON2: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7146769Z   ENABLE_CCACHE: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7147099Z   REMOVE_UNUSED_PACKAGES: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7147313Z   NEED_DTBO: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7147503Z   BUILD_BOOT_IMG: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7147849Z   SOURCE_BOOT_IMAGE: https://raw.githubusercontent.com/xiaoleGun/KernelSU_action/main/boot/boot.img
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7148236Z   ADD_OVERLAYFS_CONFIG: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7148449Z   FIX_WIFI_SPEED: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7148644Z   KPM_SUPPORT: false
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7149003Z   KPM_URL: https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/0.12.2/patch_linux
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7149379Z   ANDROID_TAG: [A13+]
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7149567Z   BUILD_TIME: 202611260151
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7149781Z   UPLOADNAME: -KernelSU-xxksu_13035
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7150088Z ##[endgroup]
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7181337Z [GB] applying omni_clock_offset.patch (monotonic+boottime per-uid uptime spoof)
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7450794Z patching file include/linux/susfs_def.h
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7451275Z Hunk #1 FAILED at 23.
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7451740Z 1 out of 1 hunk FAILED -- saving rejects to file include/linux/susfs_def.h.rej
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7452389Z patch: **** malformed patch at line 21:  #endif
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7452589Z 
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7452689Z patching file include/linux/susfs.h
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:55.7457234Z [GB] direct patch did not apply cleanly -> layout-agnostic hand-port
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0544818Z [+] susfs_def.h: added define = 0x60130 (max existing + 0x100)
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0545437Z [+] susfs.h: inserted structs + decls
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0545768Z [+] fs/susfs.c: appended functions
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0546046Z [+] posix-timers.c: extern + 2 syscall hook(s)
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0546472Z [+] ./KernelSU/kernel/Kconfig: inserted KSU_SUSFS_CLOCK_OFFSET before next config (line 206)
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0546921Z [!] clock_offset hand-port issues:
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0547223Z     - core_hook dispatch file not found (no OPEN_REDIRECT/SUS_SU handler)
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0576738Z [GB] hand-port FAILED
+build (xxksu)	Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch	2026-11-25T19:52:57.0591346Z ##[error]Process completed with exit code 1.
+[watcher exited]

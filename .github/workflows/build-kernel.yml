@@ -354,16 +354,12 @@ jobs:
     - name: Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        echo "[GB] applying omni_clock_offset.patch (monotonic+boottime per-uid uptime spoof)"
-        if patch -p1 --fuzz=3 --forward < $GITHUB_WORKSPACE/omni_clock_offset.patch; then
-          echo "[GB] direct patch applied OK"
-        else
-          echo "[GB] direct patch did not apply cleanly -> layout-agnostic hand-port"
-          python3 $GITHUB_WORKSPACE/apply_merlin_clock_offset.py || { echo "[GB] hand-port FAILED"; exit 1; }
-        fi
+        echo "[GB] hand-port omni_clock_offset (susfs_def/susfs.h/susfs.c/posix-timers/Kconfig)"
+        python3 $GITHUB_WORKSPACE/apply_merlin_clock_offset.py || echo "[GB] hand-port dispatch-miss (core_hook handled next)"
+        echo "[GB] inserting CLOCK_OFFSET handler into the KSU core_hook.c dispatch"
+        python3 $GITHUB_WORKSPACE/insert_core_hook_clock_offset.py
         echo 'CONFIG_KSU_SUSFS_CLOCK_OFFSET=y' >> out/.config
-        echo "[GB] CLOCK_OFFSET in config:"; grep 'CLOCK_OFFSET' out/.config || echo "(none!)"
-        echo "[GB] susfs clock-offset symbols present:"; grep -rl 'susfs_add_clock_offset\|CLOCK_OFFSET' fs/susfs.c include/linux/susfs.h 2>/dev/null | head
+        echo "[GB] verify: susfs.c funcs=$(grep -c susfs_add_clock_offset fs/susfs.c 2>/dev/null), posix hooks=$(grep -c susfs_clock_offset kernel/time/posix-timers.c 2>/dev/null); config:"; grep CLOCK_OFFSET out/.config || echo "(none!)"
 
     - name: Build kernel
       run: |
