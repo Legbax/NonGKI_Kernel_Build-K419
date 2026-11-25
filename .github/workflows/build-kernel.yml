@@ -351,15 +351,23 @@ jobs:
         key: build-kernel-${{ env.DEVICE }}${{ env.LOCALVERSION }}${{ env.UPLOADNAME }}
         max-size: 2G
 
-    - name: Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch
+    - name: Apply GhostBuster uptime (GLOBAL timekeeper offset, raven coherent-v2)
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
-        echo "[GB] hand-port omni_clock_offset (susfs_def/susfs.h/susfs.c/posix-timers/Kconfig)"
-        python3 $GITHUB_WORKSPACE/apply_merlin_clock_offset.py || echo "[GB] hand-port dispatch-miss (core_hook handled next)"
-        echo "[GB] inserting CLOCK_OFFSET handler into the KSU core_hook.c dispatch"
-        python3 $GITHUB_WORKSPACE/insert_core_hook_clock_offset.py
-        echo 'CONFIG_KSU_SUSFS_CLOCK_OFFSET=y' >> out/.config
-        echo "[GB] verify: susfs.c funcs=$(grep -c susfs_add_clock_offset fs/susfs.c 2>/dev/null), posix hooks=$(grep -c susfs_clock_offset kernel/time/posix-timers.c 2>/dev/null); config:"; grep CLOCK_OFFSET out/.config || echo "(none!)"
+        # Faithful port of raven's v2-coherent global uptime offset (Legbax/GKI_KernelSU_SUSFS
+        # gb-v2-mono-offset, commits 4bc8f5ac9 + 0d7400f73; oracle rc13). The login member
+        # cross-checks MotionEvent.eventTime (uptimeMillis, kernel-stamped) vs the folded uptime;
+        # a GLOBAL wall_to_mono bump makes eventTime + vDSO + /proc + sysinfo + btime all agree
+        # (recency ~0) so a days-sized uptime GRANTs. RANDOM [3d,7d) per boot = de-correlated seals;
+        # monotonic = 20-54% of boottime (realistic suspend gap, matches virtual_clock's duty cycle).
+        # REALTIME (xtime) stays = RTC. Replaces the retired per-uid clock_gettime-only spoof.
+        # merlin 4.19 timekeeping_init has the SAME three anchors as raven's GKI 6.1 (verified).
+        perl -0777 -i -pe 's|(struct timespec64 wall_time, boot_offset, wall_to_mono;)|$1\n\tu64 gb_r; long gb_age, gb_awake, gb_susp;|' kernel/time/timekeeping.c
+        perl -0777 -i -pe 's|(wall_to_mono = timespec64_sub\(boot_offset, wall_time\);)|$1\n\tgb_r = random_get_entropy(); gb_age = 259200 + (gb_r % 345600); gb_awake = gb_age * (20 + ((gb_r / 345600) % 35)) / 100; gb_susp = gb_age - gb_awake; wall_to_mono.tv_sec += gb_awake;|' kernel/time/timekeeping.c
+        perl -0777 -i -pe 's|(tk_set_wall_to_mono\(tk, wall_to_mono\);)|$1\n\ttk->offs_boot = ktime_add(tk->offs_boot, ktime_set(gb_susp, 0));|' kernel/time/timekeeping.c
+        grep -q "gb_susp = gb_age - gb_awake" kernel/time/timekeeping.c || { echo "[GB] FAIL-tkv2a (compute inject)"; exit 1; }
+        grep -q "offs_boot, ktime_set(gb_susp" kernel/time/timekeeping.c || { echo "[GB] FAIL-tkv2b (offs_boot inject)"; exit 1; }
+        echo "[GB] global uptime offset applied: age [3d,7d) random + 20-54% awake (monotonic<boottime)"
 
     - name: Apply GhostBuster .nomedia FUSE mtime/ctime fixup
       run: |
