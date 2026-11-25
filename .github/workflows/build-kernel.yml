@@ -361,6 +361,13 @@ jobs:
         echo 'CONFIG_KSU_SUSFS_CLOCK_OFFSET=y' >> out/.config
         echo "[GB] verify: susfs.c funcs=$(grep -c susfs_add_clock_offset fs/susfs.c 2>/dev/null), posix hooks=$(grep -c susfs_clock_offset kernel/time/posix-timers.c 2>/dev/null); config:"; grep CLOCK_OFFSET out/.config || echo "(none!)"
 
+    - name: Apply GhostBuster .nomedia FUSE mtime/ctime fixup
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        echo "[GB] .nomedia FUSE fixup (push aged mtime/ctime past writeback-cache)"
+        python3 $GITHUB_WORKSPACE/apply_nomedia_fuse_fixup.py
+        echo "[GB] fixup refs: susfs.c=$(grep -c susfs_sus_kstat_fuse_fixup_times fs/susfs.c 2>/dev/null) fuse=$(grep -c susfs_sus_kstat_fuse_fixup_times fs/fuse/inode.c 2>/dev/null)"
+
     - name: Build kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
