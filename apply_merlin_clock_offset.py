@@ -40,12 +40,15 @@ if os.path.exists(p):
         lines = s.split("\n")
         idxs = [i for i, l in enumerate(lines) if l.startswith("#define CMD_SUSFS_")]
         if idxs:
-            # pick a value that does NOT collide with any existing CMD_SUSFS_* (bakasu already uses 0x60010)
+            # PINNED value (collision-free: existing CMD_SUSFS_* max is 0x60030). The
+            # invoker hard-codes this exact value, so it must stay deterministic.
             used = [int(m, 16) for m in re.findall(r'#define\s+CMD_SUSFS_\w+\s+(0x[0-9a-fA-F]+)', s)]
-            val = (max(used) + 0x100) if used else 0x600100
+            val = 0x60130
+            if val in used:
+                raise SystemExit("[!] 0x60130 collides with an existing CMD_SUSFS_*; pick another")
             lines.insert(idxs[-1] + 1, "#define CMD_SUSFS_ADD_CLOCK_OFFSET 0x%X" % val)
             write(p, "\n".join(lines))
-            print("[+] susfs_def.h: added define = 0x%X (max existing + 0x100)" % val)
+            print("[+] susfs_def.h: added define = 0x%X (pinned)" % val)
         else:
             errs.append("susfs_def.h: no CMD_SUSFS_ anchor")
     else:
@@ -72,7 +75,7 @@ if os.path.exists(p):
             "\tlong long                        delta_boot_ns;\n"
             "\tstruct hlist_node                node;\n"
             "};\n"
-            "int susfs_add_clock_offset(struct st_susfs_clock_offset* __user user_info);\n"
+            "void susfs_add_clock_offset(void __user **user_info);\n"
             "void susfs_apply_clock_offset(const clockid_t which_clock, struct timespec64 *tp);\n"
             "#endif\n"
         )
@@ -100,14 +103,16 @@ if os.path.exists(p):
             "static DEFINE_HASHTABLE(CLOCK_OFFSET_HLIST, 4);\n"
             "static bool susfs_clock_offset_active = false;\n"
             "static DEFINE_SPINLOCK(susfs_clock_offset_lock);\n\n"
-            "int susfs_add_clock_offset(struct st_susfs_clock_offset* __user user_info) {\n"
+            "void susfs_add_clock_offset(void __user **user_info) {\n"
             "\tstruct st_susfs_clock_offset info;\n"
             "\tstruct st_susfs_clock_offset_hlist *new_entry, *tmp_entry;\n"
             "\tstruct hlist_node *tmp_node;\n"
             "\tint bkt;\n\n"
-            "\tif (copy_from_user(&info, user_info, sizeof(info))) {\n"
+            "\t/* xxksu/ShockWAVE dispatch passes arg as void __user ** (the real user\n"
+            "\t * pointer is *user_info), matching every other susfs_* handler here. */\n"
+            "\tif (copy_from_user(&info, (struct st_susfs_clock_offset __user *)*user_info, sizeof(info))) {\n"
             "\t\tSUSFS_LOGE(\"failed copying from userspace\\n\");\n"
-            "\t\treturn 1;\n"
+            "\t\treturn;\n"
             "\t}\n\n"
             "\tspin_lock(&susfs_clock_offset_lock);\n"
             "\thash_for_each_safe(CLOCK_OFFSET_HLIST, bkt, tmp_node, tmp_entry, node) {\n"
@@ -121,7 +126,7 @@ if os.path.exists(p):
             "\tnew_entry = kmalloc(sizeof(struct st_susfs_clock_offset_hlist), GFP_KERNEL);\n"
             "\tif (!new_entry) {\n"
             "\t\tSUSFS_LOGE(\"no enough memory\\n\");\n"
-            "\t\treturn 1;\n"
+            "\t\treturn;\n"
             "\t}\n"
             "\tnew_entry->target_uid = info.target_uid;\n"
             "\tnew_entry->delta_mono_ns = info.delta_mono_ns;\n"
@@ -132,7 +137,6 @@ if os.path.exists(p):
             "\tspin_unlock(&susfs_clock_offset_lock);\n"
             "\tSUSFS_LOGI(\"clock_offset added: uid=%d delta_mono=%lld delta_boot=%lld\\n\",\n"
             "\t\t\tinfo.target_uid, info.delta_mono_ns, info.delta_boot_ns);\n"
-            "\treturn 0;\n"
             "}\n\n"
             "void susfs_apply_clock_offset(const clockid_t which_clock, struct timespec64 *tp) {\n"
             "\tstruct st_susfs_clock_offset_hlist *entry;\n"
@@ -238,61 +242,12 @@ else:
     else:
         print("[=] %s: KSU_SUSFS_CLOCK_OFFSET present" % kc)
 
-# ---- 6) core_hook dispatch: find the file with the SUSFS command handler ----
-ch = walk_find("#endif //#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT", ".c")
-if ch is None:
-    ch = walk_find("CMD_SUSFS_SUS_SU", ".c")
-if ch is None:
-    errs.append("core_hook dispatch file not found (no OPEN_REDIRECT/SUS_SU handler)")
-else:
-    s = read(ch)
-    if "CMD_SUSFS_ADD_CLOCK_OFFSET" in s:
-        print("[=] %s: dispatch present" % ch)
-    else:
-        if "arg2 == CMD_SUSFS_" in s or "arg2==CMD_SUSFS_" in s:
-            # resukisu if-style handler: (arg2=cmd, arg3=user ptr, arg5=result)
-            block = (
-                "#ifdef CONFIG_KSU_SUSFS_CLOCK_OFFSET\n"
-                "\t\tif (arg2 == CMD_SUSFS_ADD_CLOCK_OFFSET) {\n"
-                "\t\t\tint error = 0;\n"
-                "\t\t\tif (!ksu_access_ok((void __user*)arg3, sizeof(struct st_susfs_clock_offset))) {\n"
-                "\t\t\t\tpr_err(\"susfs: CMD_SUSFS_ADD_CLOCK_OFFSET -> arg3 is not accessible\\n\");\n"
-                "\t\t\t\treturn 0;\n"
-                "\t\t\t}\n"
-                "\t\t\tif (!ksu_access_ok((void __user*)arg5, sizeof(error))) {\n"
-                "\t\t\t\tpr_err(\"susfs: CMD_SUSFS_ADD_CLOCK_OFFSET -> arg5 is not accessible\\n\");\n"
-                "\t\t\t\treturn 0;\n"
-                "\t\t\t}\n"
-                "\t\t\terror = susfs_add_clock_offset((struct st_susfs_clock_offset __user*)arg3);\n"
-                "\t\t\tpr_info(\"susfs: CMD_SUSFS_ADD_CLOCK_OFFSET -> ret: %d\\n\", error);\n"
-                "\t\t\tif (copy_to_user((void __user*)arg5, &error, sizeof(error)))\n"
-                "\t\t\t\tpr_info(\"susfs: copy_to_user() failed\\n\");\n"
-                "\t\t\treturn 0;\n"
-                "\t\t}\n"
-                "#endif //#ifdef CONFIG_KSU_SUSFS_CLOCK_OFFSET\n"
-            )
-        else:
-            # bakasu switch/case-style handler: single `arg` (the __user ptr); handler copies in itself
-            block = (
-                "#ifdef CONFIG_KSU_SUSFS_CLOCK_OFFSET\n"
-                "\t\tcase CMD_SUSFS_ADD_CLOCK_OFFSET: {\n"
-                "\t\t\tsusfs_add_clock_offset((struct st_susfs_clock_offset __user *)arg);\n"
-                "\t\t\treturn 0;\n"
-                "\t\t}\n"
-                "#endif //#ifdef CONFIG_KSU_SUSFS_CLOCK_OFFSET\n"
-            )
-        a1 = "#endif //#ifdef CONFIG_KSU_SUSFS_OPEN_REDIRECT"
-        a2 = "#ifdef CONFIG_KSU_SUSFS_SUS_SU"
-        if a1 in s:
-            s = s.replace(a1, a1 + "\n" + block, 1)
-            write(ch, s)
-            print("[+] %s: dispatch after OPEN_REDIRECT #endif" % ch)
-        elif a2 in s:
-            s = s.replace(a2, block + a2, 1)
-            write(ch, s)
-            print("[+] %s: dispatch before SUS_SU #ifdef (fallback)" % ch)
-        else:
-            errs.append("%s: no dispatch anchor" % ch)
+# ---- 6) core_hook dispatch: HANDLED SEPARATELY by insert_core_hook_clock_offset.py ----
+# The xxksu/ShockWAVE susfs dispatch is a switch(cmd){ case ...: susfs_*(arg); } in
+# kernel/supercall/supercall.c where `arg` is `void __user **` (double pointer). That
+# inserter emits the correct `susfs_add_clock_offset(arg);` case. We deliberately do NOT
+# insert a dispatch here to avoid a wrong-convention (single-pointer-cast) duplicate.
+print("[=] dispatch: delegated to insert_core_hook_clock_offset.py (supercall.c switch, arg is void __user **)")
 
 if errs:
     print("[!] clock_offset hand-port issues:")

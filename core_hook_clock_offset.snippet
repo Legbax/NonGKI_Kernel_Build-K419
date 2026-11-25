@@ -1,5 +1,5 @@
 #ifdef CONFIG_KSU_SUSFS_CLOCK_OFFSET
 		case CMD_SUSFS_ADD_CLOCK_OFFSET:
-			susfs_add_clock_offset((struct st_susfs_clock_offset __user *)arg);
+			susfs_add_clock_offset(arg);
 			return 0;
 #endif // #ifdef CONFIG_KSU_SUSFS_CLOCK_OFFSET
