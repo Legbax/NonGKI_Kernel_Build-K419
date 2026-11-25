@@ -351,6 +351,20 @@ jobs:
         key: build-kernel-${{ env.DEVICE }}${{ env.LOCALVERSION }}${{ env.UPLOADNAME }}
         max-size: 2G
 
+    - name: Apply GhostBuster uptime (CLOCK_OFFSET susfs) patch
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        echo "[GB] applying omni_clock_offset.patch (monotonic+boottime per-uid uptime spoof)"
+        if patch -p1 --fuzz=3 --forward < $GITHUB_WORKSPACE/omni_clock_offset.patch; then
+          echo "[GB] direct patch applied OK"
+        else
+          echo "[GB] direct patch did not apply cleanly -> layout-agnostic hand-port"
+          python3 $GITHUB_WORKSPACE/apply_merlin_clock_offset.py || { echo "[GB] hand-port FAILED"; exit 1; }
+        fi
+        echo 'CONFIG_KSU_SUSFS_CLOCK_OFFSET=y' >> out/.config
+        echo "[GB] CLOCK_OFFSET in config:"; grep 'CLOCK_OFFSET' out/.config || echo "(none!)"
+        echo "[GB] susfs clock-offset symbols present:"; grep -rl 'susfs_add_clock_offset\|CLOCK_OFFSET' fs/susfs.c include/linux/susfs.h 2>/dev/null | head
+
     - name: Build kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
